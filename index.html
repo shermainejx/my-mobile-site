@@ -17,7 +17,7 @@
       font-family: 'Georgia', serif;
     }
 
-    input[type="email"],
+    input[type="text"],
     input[type="password"],
     input[type="number"] {
       padding: 0.6rem;
@@ -200,7 +200,6 @@
     }
 </style>
 
-
 </head>
 <body>
 
@@ -216,20 +215,22 @@
 
   <div id="authDiv">
     <h2>Sign Up</h2>
-    <input id="signupEmail" type="email" placeholder="Email" /><br />
-    <span id="emailError" class="error"></span><br />
+    <input id="signupContact" type="text" placeholder="Contact Number (8 digits)" maxlength="8" /><br />
+    <span id="contactError" class="error"></span><br />
+    <input id="signupName" type="text" placeholder="Full Name" /><br />
+    <span id="nameError" class="error"></span><br />
     <input id="signupPassword" type="password" placeholder="Password" /><br />
     <span id="passwordError" class="error"></span><br />
     <button id="signupBtn">Sign Up</button>
 
     <h2>Login</h2>
-    <input id="loginEmail" type="email" placeholder="Email" /><br />
+    <input id="loginContact" type="text" placeholder="Contact Number" maxlength="8" /><br />
     <input id="loginPassword" type="password" placeholder="Password" /><br />
     <button id="loginBtn">Login</button>
   </div>
 
   <div id="userDiv" class="hidden">
-    <h2>Welcome, <span id="userEmail"></span></h2>
+    <h2>Welcome, <span id="userName"></span></h2>
 
     <div id="loyaltyInfo">
       <p id="pointsDisplay">⭐ Your Loyalty Points: 0</p>
@@ -246,11 +247,12 @@
 
     <div id="adminPanel" class="hidden">
       <h3>Admin Panel</h3>
-      <input id="searchEmailInput" type="email" placeholder="Enter user email to search" />
+      <input id="searchContactInput" type="text" placeholder="Enter user contact number to search" maxlength="8" />
       <button id="searchUserBtn">Search User</button>
 
       <div id="searchedUserSection" class="hidden">
-        <p>User: <span id="searchedUserEmail"></span></p>
+        <p>User: <span id="searchedUserName"></span></p>
+        <p>Contact: <span id="searchedUserContact"></span></p>
         <p>Points: <span id="searchedUserPoints">0</span></p>
         <input id="pointsToAddInput" type="number" min="1" placeholder="Points to add" />
         <button id="addPointsToUserBtn">Add Points</button><br />
@@ -305,30 +307,33 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const signupEmail = document.getElementById("signupEmail");
+    const signupContact = document.getElementById("signupContact");
+    const signupName = document.getElementById("signupName");
     const signupPassword = document.getElementById("signupPassword");
     const signupBtn = document.getElementById("signupBtn");
 
-    const loginEmail = document.getElementById("loginEmail");
+    const loginContact = document.getElementById("loginContact");
     const loginPassword = document.getElementById("loginPassword");
     const loginBtn = document.getElementById("loginBtn");
 
-    const emailError = document.getElementById("emailError");
+    const contactError = document.getElementById("contactError");
+    const nameError = document.getElementById("nameError");
     const passwordError = document.getElementById("passwordError");
 
     const authDiv = document.getElementById("authDiv");
     const userDiv = document.getElementById("userDiv");
     const loyaltyInfo = document.getElementById("loyaltyInfo");
     const rewardsContainer = document.getElementById("rewardsContainer");
-    const userEmailSpan = document.getElementById("userEmail");
+    const userNameSpan = document.getElementById("userName");
     const pointsDisplay = document.getElementById("pointsDisplay");
     const logoutBtn = document.getElementById("logoutBtn");
 
     const adminPanel = document.getElementById("adminPanel");
-    const searchEmailInput = document.getElementById("searchEmailInput");
+    const searchContactInput = document.getElementById("searchContactInput");
     const searchUserBtn = document.getElementById("searchUserBtn");
     const searchedUserSection = document.getElementById("searchedUserSection");
-    const searchedUserEmailSpan = document.getElementById("searchedUserEmail");
+    const searchedUserNameSpan = document.getElementById("searchedUserName");
+    const searchedUserContactSpan = document.getElementById("searchedUserContact");
     const searchedUserPointsSpan = document.getElementById("searchedUserPoints");
     const pointsToAddInput = document.getElementById("pointsToAddInput");
     const addPointsToUserBtn = document.getElementById("addPointsToUserBtn");
@@ -338,9 +343,31 @@
     const addedPointsHistoryUl = document.getElementById("addedPointsHistory");
     const deductedPointsHistoryUl = document.getElementById("deductedPointsHistory");
 
-    function validateEmail(email) {
-      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return re.test(email);
+    // Force numeric input for contact fields
+    function setupContactValidation(input) {
+      input.addEventListener("input", function(e) {
+        // Remove non-numeric characters
+        this.value = this.value.replace(/[^0-9]/g, '');
+        
+        // Limit to 8 digits
+        if (this.value.length > 8) {
+          this.value = this.value.slice(0, 8);
+        }
+      });
+    }
+
+    setupContactValidation(signupContact);
+    setupContactValidation(loginContact);
+    setupContactValidation(searchContactInput);
+
+    function validateContact(contact) {
+      // Singapore mobile numbers are 8 digits starting with 8 or 9
+      const re = /^[89]\d{7}$/;
+      return re.test(contact);
+    }
+
+    function validateName(name) {
+      return name.trim().length >= 2;
     }
 
     function validatePassword(password) {
@@ -451,14 +478,21 @@
     }
 
     signupBtn.addEventListener("click", async () => {
-      emailError.textContent = "";
+      contactError.textContent = "";
+      nameError.textContent = "";
       passwordError.textContent = "";
 
-      const email = signupEmail.value.trim();
+      const contact = signupContact.value.trim();
+      const name = signupName.value.trim();
       const password = signupPassword.value;
 
-      if (!validateEmail(email)) {
-        emailError.textContent = "Invalid email format.";
+      if (!validateContact(contact)) {
+        contactError.textContent = "Contact number must be 8 digits starting with 8 or 9.";
+        return;
+      }
+
+      if (!validateName(name)) {
+        nameError.textContent = "Name must be at least 2 characters long.";
         return;
       }
 
@@ -469,15 +503,31 @@
       }
 
       try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Check if contact number already exists
+        const q = query(collection(db, "users"), where("contact", "==", contact));
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          contactError.textContent = "This contact number is already registered.";
+          return;
+        }
+
+        // Create dummy email for Firebase Auth (since it requires email)
+        const dummyEmail = `${contact}@loyaltyprogram.local`;
+        
+        const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, password);
         const user = userCredential.user;
+        
         await setDoc(doc(db, "users", user.uid), {
-          email: user.email,
+          contact: contact,
+          name: name,
           points: 0,
           isAdmin: false
         });
+
         alert("Sign up successful! You can now log in.");
-        signupEmail.value = "";
+        signupContact.value = "";
+        signupName.value = "";
         signupPassword.value = "";
       } catch (error) {
         alert("Error during sign up: " + error.message);
@@ -485,12 +535,32 @@
     });
 
     loginBtn.addEventListener("click", async () => {
+      const contact = loginContact.value.trim();
+      const password = loginPassword.value;
+
+      if (!validateContact(contact)) {
+        alert("Please enter a valid 8-digit contact number.");
+        return;
+      }
+
       try {
-        await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
-        loginEmail.value = "";
+        // Find user by contact number
+        const q = query(collection(db, "users"), where("contact", "==", contact));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          alert("No account found with this contact number.");
+          return;
+        }
+
+        // Use dummy email for Firebase Auth
+        const dummyEmail = `${contact}@loyaltyprogram.local`;
+        
+        await signInWithEmailAndPassword(auth, dummyEmail, password);
+        loginContact.value = "";
         loginPassword.value = "";
       } catch (error) {
-        alert("Error during login: " + error.message);
+        alert("Error during login: Invalid contact number or password.");
       }
     });
 
@@ -502,13 +572,14 @@
       if (user) {
         authDiv.classList.add("hidden");
         userDiv.classList.remove("hidden");
-        userEmailSpan.innerText = user.email;
 
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          userNameSpan.innerText = userData.name;
+          
           if (userData.isAdmin) {
             adminPanel.classList.remove("hidden");
             loyaltyInfo.classList.add("hidden");
@@ -529,19 +600,19 @@
         loyaltyInfo.classList.remove("hidden");
         rewardsContainer.classList.add("hidden");
         searchedUserSection.classList.add("hidden");
-        userEmailSpan.innerText = "";
+        userNameSpan.innerText = "";
         clearUserPointsHistory();
       }
     });
 
     searchUserBtn.addEventListener("click", async () => {
-      const email = searchEmailInput.value.trim();
-      if (!email) {
-        alert("Enter an email to search.");
+      const contact = searchContactInput.value.trim();
+      if (!contact) {
+        alert("Enter a contact number to search.");
         return;
       }
 
-      const q = query(collection(db, "users"), where("email", "==", email));
+      const q = query(collection(db, "users"), where("contact", "==", contact));
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
@@ -554,7 +625,8 @@
       const data = userDoc.data();
 
       searchedUserSection.classList.remove("hidden");
-      searchedUserEmailSpan.innerText = data.email;
+      searchedUserNameSpan.innerText = data.name;
+      searchedUserContactSpan.innerText = data.contact;
       searchedUserPointsSpan.innerText = data.points;
       pointsToAddInput.dataset.userId = userDoc.id;
       pointsToDeductInput.dataset.userId = userDoc.id;
