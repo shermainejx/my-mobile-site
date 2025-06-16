@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Loyalty Points:</title>
+<style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 2rem;
+      background-color: #fff8f0;
+      color: #5b342f;
+    }
+
+    h1, h2, h3 {
+      color: #8b4513;
+      font-family: 'Georgia', serif;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="number"] {
+      padding: 0.6rem;
+      margin: 0.4rem 0;
+      width: 100%;
+      max-width: 300px;
+      border: 2px solid #f0c987;
+      border-radius: 10px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      background-color: #fffbe6;
+    }
+
+    .header-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      width: 100%;
+    }
+
+    input:focus {
+      border-color: #f4a261;
+      outline: none;
+      box-shadow: 0 0 6px #f4a26166;
+    }
+
+    button {
+      background-color: #d2691e;
+      color: white;
+      padding: 0.7rem 1.4rem;
+      margin-top: 0.5rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #b45715;
+    }
+
+    button.redeemed {
+      background-color: #4CAF50 !important;
+      cursor: not-allowed;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #userDiv {
+      margin-top: 2rem;
+    }
+
+    #loyaltyInfo {
+      background: #fffdf7;
+      padding: 1.2rem 1.5rem;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(210, 105, 30, 0.2);
+      max-width: 600px;
+      margin-bottom: 2rem;
+      border: 2px dashed #f0c987;
+    }
+
+    #pointsDisplay {
+      font-size: 1.4rem;
+      font-weight: bold;
+      background: #ffe4b5;
+      color: #6b2e12;
+      padding: 0.8rem 1.2rem;
+      border-radius: 30px;
+      display: inline-block;
+      margin-bottom: 1rem;
+      box-shadow: inset 0 0 4px #d2b48c;
+    }
+
+    #rewardCarousel {
+      display: flex;
+      overflow-x: auto;
+      gap: 1rem;
+      scroll-snap-type: x mandatory;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .rewardItem {
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+      border: 2px solid #f4a261;
+      border-radius: 10px;
+      background-color: #fff7e6;
+      padding: 1rem;
+      width: 200px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .rewardItem img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    #adminPanel {
+      background: #fbe9d0;
+      padding: 1.2rem 1.5rem;
+      border-radius: 15px;
+      max-width: 600px;
+      border: 2px solid #f4a261;
+    }
+
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    li {
+      background: #fdebd0;
+      margin-bottom: 0.3rem;
+      padding: 0.5rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+    }
+
+    li::before {
+      content: "🍪 ";
+      margin-right: 0.5rem;
+    }
+
+    .error {
+      color: #e74c3c;
+      font-size: 0.9em;
+    }
+
+    hr {
+      margin: 1.5rem 0;
+      border: none;
+      border-top: 1px dashed #d2b48c;
+    }
+
+    .company-logo {
+      width: 300px;
+      height: auto;
+    }
+
+     @media (max-width: 768px) {
+      .header-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+      }
+      
+      .company-logo {
+        width: 100px;
+      }
+    }
+
+    @media (max-width: 500px) {
+      input, button {
+        width: 100%;
+        font-size: 1rem;
+      }
+      .header-container {
+        flex-direction: row;
+        text-align: left;
+      }
+      .company-logo {
+        width: 100px;
+      }
+    }
+</style>
+
+
+</head>
+<body>
+
+  <div class="header-container">
+  <h1>Loyalty Program</h1>
+  <img src="newduck.png" alt="Company Logo" class="company-logo">
+  </div>
+
+  <div id="rewardsContainer" class="hidden">
+    <h3>🎁 Redeem Your Rewards</h3>
+    <div id="rewardCarousel"></div>
+  </div>
+
+  <div id="authDiv">
+    <h2>Sign Up</h2>
+    <input id="signupEmail" type="email" placeholder="Email" /><br />
+    <span id="emailError" class="error"></span><br />
+    <input id="signupPassword" type="password" placeholder="Password" /><br />
+    <span id="passwordError" class="error"></span><br />
+    <button id="signupBtn">Sign Up</button>
+
+    <h2>Login</h2>
+    <input id="loginEmail" type="email" placeholder="Email" /><br />
+    <input id="loginPassword" type="password" placeholder="Password" /><br />
+    <button id="loginBtn">Login</button>
+  </div>
+
+  <div id="userDiv" class="hidden">
+    <h2>Welcome, <span id="userEmail"></span></h2>
+
+    <div id="loyaltyInfo">
+      <p id="pointsDisplay">⭐ Your Loyalty Points: 0</p>
+      <h3>Points History</h3>
+      <div>
+        <strong>Added Points:</strong>
+        <ul id="addedPointsHistory"></ul>
+      </div>
+      <div>
+        <strong>Deducted Points:</strong>
+        <ul id="deductedPointsHistory"></ul>
+      </div>
+    </div>
+
+    <div id="adminPanel" class="hidden">
+      <h3>Admin Panel</h3>
+      <input id="searchEmailInput" type="email" placeholder="Enter user email to search" />
+      <button id="searchUserBtn">Search User</button>
+
+      <div id="searchedUserSection" class="hidden">
+        <p>User: <span id="searchedUserEmail"></span></p>
+        <p>Points: <span id="searchedUserPoints">0</span></p>
+        <input id="pointsToAddInput" type="number" min="1" placeholder="Points to add" />
+        <button id="addPointsToUserBtn">Add Points</button><br />
+        <input id="pointsToDeductInput" type="number" min="1" placeholder="Points to deduct" />
+        <button id="deductPointsToUserBtn">Deduct Points</button>
+      </div>
+    </div>
+
+    <button id="logoutBtn">Logout</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import {
+      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+      onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+    import {
+      getFirestore, doc, getDoc, setDoc, updateDoc,
+      query, where, collection, getDocs, addDoc, orderBy
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const rewardList = [
+      {
+        name: "Chocolate Cake",
+        image: "https://via.placeholder.com/150x100/d2691e/ffffff?text=Chocolate+Cake",
+        cost: 20
+      },
+      {
+        name: "Ice Cream Cone",
+        image: "https://via.placeholder.com/150x100/87ceeb/ffffff?text=Ice+Cream",
+        cost: 15
+      },
+      {
+        name: "Coffee Latte",
+        image: "https://via.placeholder.com/150x100/8b4513/ffffff?text=Coffee",
+        cost: 10
+      }
+    ];
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC86H1coVbpbPO-wWt7cKXKDjOkCFRvHjk",
+      authDomain: "chenzhenloyalty.firebaseapp.com",
+      projectId: "chenzhenloyalty",
+      storageBucket: "chenzhenloyalty.firebasestorage.app",
+      messagingSenderId: "1040077302609",
+      appId: "1:1040077302609:web:e67eb3c759a84a26d5c170"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const signupEmail = document.getElementById("signupEmail");
+    const signupPassword = document.getElementById("signupPassword");
+    const signupBtn = document.getElementById("signupBtn");
+
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const loginBtn = document.getElementById("loginBtn");
+
+    const emailError = document.getElementById("emailError");
+    const passwordError = document.getElementById("passwordError");
+
+    const authDiv = document.getElementById("authDiv");
+    const userDiv = document.getElementById("userDiv");
+    const loyaltyInfo = document.getElementById("loyaltyInfo");
+    const rewardsContainer = document.getElementById("rewardsContainer");
+    const userEmailSpan = document.getElementById("userEmail");
+    const pointsDisplay = document.getElementById("pointsDisplay");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    const adminPanel = document.getElementById("adminPanel");
+    const searchEmailInput = document.getElementById("searchEmailInput");
+    const searchUserBtn = document.getElementById("searchUserBtn");
+    const searchedUserSection = document.getElementById("searchedUserSection");
+    const searchedUserEmailSpan = document.getElementById("searchedUserEmail");
+    const searchedUserPointsSpan = document.getElementById("searchedUserPoints");
+    const pointsToAddInput = document.getElementById("pointsToAddInput");
+    const addPointsToUserBtn = document.getElementById("addPointsToUserBtn");
+    const pointsToDeductInput = document.getElementById("pointsToDeductInput");
+    const deductPointsToUserBtn = document.getElementById("deductPointsToUserBtn");
+
+    const addedPointsHistoryUl = document.getElementById("addedPointsHistory");
+    const deductedPointsHistoryUl = document.getElementById("deductedPointsHistory");
+
+    function validateEmail(email) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(email);
+    }
+
+    function validatePassword(password) {
+      const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+      return re.test(password);
+    }
+
+    let currentUserPoints = 0;
+
+    function renderRewards(points) {
+      currentUserPoints = points;
+      const container = document.getElementById("rewardCarousel");
+      container.innerHTML = "";
+      
+      rewardList.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "rewardItem";
+        
+        const canAfford = item.cost <= points;
+        
+        div.innerHTML = `
+          <img src="${item.image}" alt="${item.name}" />
+          <h4>${item.name}</h4>
+          <p>Cost: ${item.cost} pts</p>
+          <button class="redeem-btn" data-index="${index}" data-cost="${item.cost}" data-name="${item.name}" ${!canAfford ? "disabled" : ""}>
+            ${canAfford ? "Redeem" : "Not Enough Points"}
+          </button>
+        `;
+        
+        container.appendChild(div);
+      });
+
+      // Add event listeners to redeem buttons
+      document.querySelectorAll('.redeem-btn').forEach(btn => {
+        if (!btn.disabled) {
+          btn.addEventListener('click', handleRedemption);
+        }
+      });
+    }
+
+    async function handleRedemption(event) {
+      const button = event.target;
+      const itemName = button.dataset.name;
+      const itemCost = parseInt(button.dataset.cost);
+      
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        // Disable button immediately to prevent double clicks
+        button.disabled = true;
+        button.textContent = "Processing...";
+
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (!userDoc.exists()) {
+          button.disabled = false;
+          button.textContent = "Redeem";
+          return;
+        }
+        
+        const userData = userDoc.data();
+        const currentPoints = userData.points || 0;
+        
+        // Double check points
+        if (currentPoints < itemCost) {
+          alert("Not enough points!");
+          button.disabled = false;
+          button.textContent = "Redeem";
+          return;
+        }
+
+        // Calculate new points
+        const newPoints = currentPoints - itemCost;
+        
+        // Update user points in database
+        await updateDoc(userDocRef, { points: newPoints });
+        
+        // Add to deducted points history
+        await addDoc(collection(userDocRef, "deductedPoints"), { 
+          amount: itemCost,
+          itemName: itemName,
+          timestamp: new Date() 
+        });
+
+        // Update UI
+        button.textContent = "Redeemed";
+        button.classList.add("redeemed");
+        
+        // Update points display
+        pointsDisplay.innerText = `⭐ Your Loyalty Points: ${newPoints}`;
+        
+        // Refresh points history
+        await loadUserPointsHistory(user.uid);
+        
+        // Re-render rewards to update other buttons
+        renderRewards(newPoints);
+        
+        alert(`Successfully redeemed ${itemName} for ${itemCost} points!`);
+        
+      } catch (error) {
+        console.error("Error redeeming reward:", error);
+        alert("Error redeeming reward. Please try again.");
+        button.disabled = false;
+        button.textContent = "Redeem";
+      }
+    }
+
+    signupBtn.addEventListener("click", async () => {
+      emailError.textContent = "";
+      passwordError.textContent = "";
+
+      const email = signupEmail.value.trim();
+      const password = signupPassword.value;
+
+      if (!validateEmail(email)) {
+        emailError.textContent = "Invalid email format.";
+        return;
+      }
+
+      if (!validatePassword(password)) {
+        passwordError.textContent =
+          "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.";
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        await setDoc(doc(db, "users", user.uid), {
+          email: user.email,
+          points: 0,
+          isAdmin: false
+        });
+        alert("Sign up successful! You can now log in.");
+        signupEmail.value = "";
+        signupPassword.value = "";
+      } catch (error) {
+        alert("Error during sign up: " + error.message);
+      }
+    });
+
+    loginBtn.addEventListener("click", async () => {
+      try {
+        await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+        loginEmail.value = "";
+        loginPassword.value = "";
+      } catch (error) {
+        alert("Error during login: " + error.message);
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        authDiv.classList.add("hidden");
+        userDiv.classList.remove("hidden");
+        userEmailSpan.innerText = user.email;
+
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.isAdmin) {
+            adminPanel.classList.remove("hidden");
+            loyaltyInfo.classList.add("hidden");
+            rewardsContainer.classList.add("hidden");
+          } else {
+            loyaltyInfo.classList.remove("hidden");
+            rewardsContainer.classList.remove("hidden");
+            adminPanel.classList.add("hidden");
+            pointsDisplay.innerText = `⭐ Your Loyalty Points: ${userData.points}`;
+            renderRewards(userData.points);
+            loadUserPointsHistory(user.uid);
+          }
+        }
+      } else {
+        authDiv.classList.remove("hidden");
+        userDiv.classList.add("hidden");
+        adminPanel.classList.add("hidden");
+        loyaltyInfo.classList.remove("hidden");
+        rewardsContainer.classList.add("hidden");
+        searchedUserSection.classList.add("hidden");
+        userEmailSpan.innerText = "";
+        clearUserPointsHistory();
+      }
+    });
+
+    searchUserBtn.addEventListener("click", async () => {
+      const email = searchEmailInput.value.trim();
+      if (!email) {
+        alert("Enter an email to search.");
+        return;
+      }
+
+      const q = query(collection(db, "users"), where("email", "==", email));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        alert("User not found.");
+        searchedUserSection.classList.add("hidden");
+        return;
+      }
+
+      const userDoc = snapshot.docs[0];
+      const data = userDoc.data();
+
+      searchedUserSection.classList.remove("hidden");
+      searchedUserEmailSpan.innerText = data.email;
+      searchedUserPointsSpan.innerText = data.points;
+      pointsToAddInput.dataset.userId = userDoc.id;
+      pointsToDeductInput.dataset.userId = userDoc.id;
+      pointsToAddInput.value = "";
+      pointsToDeductInput.value = "";
+    });
+
+    addPointsToUserBtn.addEventListener("click", async () => {
+      const uid = pointsToAddInput.dataset.userId;
+      const amount = Number(pointsToAddInput.value);
+      if (!uid || amount <= 0) return;
+
+      const ref = doc(db, "users", uid);
+      const userDoc = await getDoc(ref);
+      if (!userDoc.exists()) return;
+
+      const newPoints = (userDoc.data().points || 0) + amount;
+      await updateDoc(ref, { points: newPoints });
+      await addDoc(collection(ref, "addedPoints"), { amount, timestamp: new Date() });
+
+      searchedUserPointsSpan.innerText = newPoints;
+      alert(`Added ${amount} points.`);
+    });
+
+    deductPointsToUserBtn.addEventListener("click", async () => {
+      const uid = pointsToDeductInput.dataset.userId;
+      const amount = Number(pointsToDeductInput.value);
+      if (!uid || amount <= 0) return;
+
+      const ref = doc(db, "users", uid);
+      const userDoc = await getDoc(ref);
+      if (!userDoc.exists()) return;
+
+      const current = userDoc.data().points || 0;
+      if (amount > current) {
+        alert("Not enough points.");
+        return;
+      }
+
+      const newPoints = current - amount;
+      await updateDoc(ref, { points: newPoints });
+      await addDoc(collection(ref, "deductedPoints"), { amount, timestamp: new Date() });
+
+      searchedUserPointsSpan.innerText = newPoints;
+      alert(`Deducted ${amount} points.`);
+    });
+
+    async function loadUserPointsHistory(userId) {
+      clearUserPointsHistory();
+      const addedRef = collection(db, "users", userId, "addedPoints");
+      const deductedRef = collection(db, "users", userId, "deductedPoints");
+
+      const added = await getDocs(query(addedRef, orderBy("timestamp", "desc")));
+      added.forEach(doc => {
+        const li = document.createElement("li");
+        li.textContent = `+${doc.data().amount} on ${formatDate(doc.data().timestamp)}`;
+        addedPointsHistoryUl.appendChild(li);
+      });
+
+      const deducted = await getDocs(query(deductedRef, orderBy("timestamp", "desc")));
+      deducted.forEach(doc => {
+        const li = document.createElement("li");
+        const data = doc.data();
+        const itemText = data.itemName ? ` (Redeemed: ${data.itemName})` : "";
+        li.textContent = `-${data.amount}${itemText} on ${formatDate(data.timestamp)}`;
+        deductedPointsHistoryUl.appendChild(li);
+      });
+    }
+
+    function clearUserPointsHistory() {
+      addedPointsHistoryUl.innerHTML = "";
+      deductedPointsHistoryUl.innerHTML = "";
+    }
+
+    function formatDate(ts) {
+      const date = ts.toDate ? ts.toDate() : new Date(ts);
+      return date.toLocaleString();
+    }
+
+  </script>
+</body>
+</html>
